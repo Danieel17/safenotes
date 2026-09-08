@@ -198,3 +198,141 @@ class ProfileApiTests(TestCase):
             self.profile_url, {"email": "x@example.com"}, format="json"
         )
         self.assertEqual(patch_response.status_code, 401)
+
+
+class UserManagementApiTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.admin = User.objects.create_user(
+            username="admin1", password="SafeNotes2026!", role="admin"
+        )
+        self.editor = User.objects.create_user(
+            username="editor1", password="SafeNotes2026!", role="editor"
+        )
+        self.lector = User.objects.create_user(
+            username="lector1", password="SafeNotes2026!", role="lector"
+        )
+        self.users_url = reverse("api-user-list-create")
+        self.token_url = reverse("api-token-obtain-pair")
+
+    def _authenticate(self, username, password="SafeNotes2026!"):
+        response = self.client.post(
+            self.token_url, {"username": username, "password": password}, format="json"
+        )
+        access = response.data["access"]
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {access}")
+        return response
+
+    # 1. Admin creates an editor; the new user can immediately obtain a JWT.
+    def test_admin_creates_editor_who_can_then_login(self):
+        self._authenticate("admin1")
+        response = self.client.post(
+            self.users_url,
+            {"username": "neweditor", "password": "SafeNotes2026!", "role": "editor"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 201)
+        self.assertTrue(User.objects.filter(username="neweditor", role="editor").exists())
+
+        self.client.credentials()
+        login_response = self.client.post(
+            self.token_url,
+            {"username": "neweditor", "password": "SafeNotes2026!"},
+            format="json",
+        )
+        self.assertEqual(login_response.status_code, 200)
+        self.assertIn("access", login_response.data)
+
+        self.assertEqual(
+            AuditLog.objects.filter(
+                action=AuditLog.ACTION_USER_CREATED, target_repr="User:neweditor"
+            ).count(),
+            1,
+        )
+
+    def test_create_user_role_restricted_to_editor_lector(self):
+        self._authenticate("admin1")
+        response = self.client.post(
+            self.users_url,
+            {"username": "sneaky", "password": "SafeNotes2026!", "role": "admin"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(User.objects.filter(username="sneaky").exists())
+
+    # 2. Deactivating a user blocks their next token request.
+    def test_deactivating_user_blocks_next_login(self):
+        self._authenticate("admin1")
+        toggle_url = reverse("api-user-toggle-active", args=[self.editor.pk])
+        response = self.client.post(toggle_url)
+        self.assertEqual(response.status_code, 200)
+
+        self.editor.refresh_from_db()
+        self.assertFalse(self.editor.is_active)
+
+        self.client.credentials()
+        login_response = self.client.post(
+            self.token_url,
+            {"username": "editor1", "password": "SafeNotes2026!"},
+            format="json",
+        )
+        self.assertEqual(login_response.status_code, 401)
+
+    # 3. Non-admins get 403 on admin-only endpoints.
+    def test_non_admin_forbidden_on_user_list(self):
+        self._authenticate("editor1")
+        response = self.client.get(self.users_url)
+        self.assertEqual(response.status_code, 403)
+
+    def test_non_admin_forbidden_on_toggle_and_role(self):
+        self._authenticate("lector1")
+        toggle_url = reverse("api-user-toggle-active", args=[self.editor.pk])
+        response = self.client.post(toggle_url)
+        self.assertEqual(response.status_code, 403)
+
+        role_url = reverse("api-user-role", args=[self.editor.pk])
+        response = self.client.post(role_url, {"role": "lector"}, format="json")
+        self.assertEqual(response.status_code, 403)
+
+    # 6. Admin accounts cannot be toggled or role-changed.
+    def test_cannot_toggle_active_admin_target(self):
+        other_admin = User.objects.create_user(
+            username="admin2", password="SafeNotes2026!", role="admin"
+        )
+        self._authenticate("admin1")
+        toggle_url = reverse("api-user-toggle-active", args=[other_admin.pk])
+        response = self.client.post(toggle_url)
+        self.assertEqual(response.status_code, 400)
+        other_admin.refresh_from_db()
+        self.assertTrue(other_admin.is_active)
+
+    def test_cannot_role_change_admin_target(self):
+        other_admin = User.objects.create_user(
+            username="admin2", password="SafeNotes2026!", role="admin"
+        )
+        self._authenticate("admin1")
+        role_url = reverse("api-user-role", args=[other_admin.pk])
+        response = self.client.post(role_url, {"role": "lector"}, format="json")
+        self.assertEqual(response.status_code, 400)
+        other_admin.refresh_from_db()
+        self.assertEqual(other_admin.role, "admin")
+
+    def test_role_change_editor_to_lector(self):
+        self._authenticate("admin1")
+        role_url = reverse("api-user-role", args=[self.editor.pk])
+        response = self.client.post(role_url, {"role": "lector"}, format="json")
+        self.assertEqual(response.status_code, 200)
+        self.editor.refresh_from_db()
+        self.assertEqual(self.editor.role, "lector")
+        self.assertEqual(
+            AuditLog.objects.filter(action=AuditLog.ACTION_USER_ROLE_CHANGED).count(), 1
+        )
+
+    def test_user_list_includes_locked_field(self):
+        self._authenticate("admin1")
+        response = self.client.get(self.users_url)
+        self.assertEqual(response.status_code, 200)
+        results = response.data["results"] if "results" in response.data else response.data
+        usernames = {row["username"]: row for row in results}
+        self.assertIn("locked", usernames["editor1"])
+        self.assertFalse(usernames["editor1"]["locked"])

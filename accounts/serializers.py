@@ -1,6 +1,7 @@
 from datetime import timedelta
 
 from django.conf import settings
+from django.contrib.auth.password_validation import validate_password
 from django.utils import timezone
 from rest_framework import serializers
 from rest_framework_simplejwt.exceptions import AuthenticationFailed
@@ -94,3 +95,47 @@ class ProfileSerializer(serializers.ModelSerializer):
         model = User
         fields = ["username", "email", "role"]
         read_only_fields = ["username", "role"]
+
+
+class UserListSerializer(serializers.ModelSerializer):
+    """Read-only representation used by the admin user list endpoint."""
+
+    locked = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = ["id", "username", "role", "is_active", "locked"]
+
+    def get_locked(self, obj):
+        return bool(obj.locked_until and obj.locked_until > timezone.now())
+
+
+class UserCreateSerializer(serializers.ModelSerializer):
+    """Create serializer mirroring the MVT ``AdminUserCreationForm``.
+
+    Role choices are deliberately restricted to editor/lector - an Admin
+    account can only be created via ``createsuperuser`` or Django's own
+    ``/admin/`` site, never through this API.
+    """
+
+    password = serializers.CharField(write_only=True)
+
+    class Meta:
+        model = User
+        fields = ["id", "username", "password", "role"]
+
+    def validate_role(self, value):
+        if value not in [User.ROLE_EDITOR, User.ROLE_LECTOR]:
+            raise serializers.ValidationError(
+                "El rol debe ser 'editor' o 'lector'."
+            )
+        return value
+
+    def validate_password(self, value):
+        validate_password(value)
+        return value
+
+    def create(self, validated_data):
+        password = validated_data.pop("password")
+        user = User.objects.create_user(password=password, **validated_data)
+        return user
