@@ -153,3 +153,74 @@ class LoginLockoutAndAuditTests(TestCase):
         )
         self.assertContains(response, "lockme")
         self.assertContains(response, "Cerrar sesión")
+
+
+class AdminUserManagementTests(TestCase):
+    def setUp(self):
+        self.admin = User.objects.create_user(
+            username="admin2", password="pass12345", role="admin"
+        )
+        self.editor = User.objects.create_user(
+            username="editor2", password="pass12345", role="editor"
+        )
+        self.lector = User.objects.create_user(
+            username="lector2", password="pass12345", role="lector"
+        )
+
+    def test_admin_can_create_editor_and_new_user_can_login(self):
+        self.client.login(username="admin2", password="pass12345")
+        response = self.client.post(
+            reverse("user-create"),
+            {"username": "neweditor", "password": "SuperSecret123!", "role": "editor"},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(User.objects.filter(username="neweditor").exists())
+
+        self.client.logout()
+        logged_in = self.client.login(username="neweditor", password="SuperSecret123!")
+        self.assertTrue(logged_in)
+
+    def test_deactivating_user_blocks_next_login(self):
+        self.client.login(username="admin2", password="pass12345")
+        response = self.client.post(reverse("user-toggle-active", args=[self.editor.pk]))
+        self.assertEqual(response.status_code, 302)
+        self.editor.refresh_from_db()
+        self.assertFalse(self.editor.is_active)
+
+        self.client.logout()
+        logged_in = self.client.login(username="editor2", password="pass12345")
+        self.assertFalse(logged_in)
+
+    def test_non_admin_gets_403_on_admin_urls(self):
+        self.client.login(username="editor2", password="pass12345")
+        for url in [
+            reverse("admin-panel"),
+            reverse("user-list"),
+            reverse("user-create"),
+        ]:
+            response = self.client.get(url)
+            self.assertEqual(response.status_code, 403)
+
+        self.client.logout()
+        self.client.login(username="lector2", password="pass12345")
+        response = self.client.get(reverse("user-list"))
+        self.assertEqual(response.status_code, 403)
+
+    def test_audit_log_shows_user_created_row(self):
+        self.client.login(username="admin2", password="pass12345")
+        self.client.post(
+            reverse("user-create"),
+            {"username": "audituser", "password": "SuperSecret123!", "role": "lector"},
+        )
+        response = self.client.get(reverse("audit:log-list"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "audituser")
+
+    def test_role_change_updates_role_and_logs(self):
+        self.client.login(username="admin2", password="pass12345")
+        response = self.client.post(
+            reverse("user-role-change", args=[self.lector.pk]), {"role": "editor"}
+        )
+        self.assertEqual(response.status_code, 302)
+        self.lector.refresh_from_db()
+        self.assertEqual(self.lector.role, "editor")

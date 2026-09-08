@@ -22,13 +22,12 @@ class SafeNotesLoginView(LoginView):
         return response
 
     def get_success_url(self):
-        # All roles currently redirect to the same home page ("/") because
-        # role-specific landing pages don't exist yet - later tickets will
-        # change only the URL targets in this mapping, not this method's
-        # shape.
+        # Admin gets its own landing page (the admin panel); editor and
+        # lector still redirect to the shared home page until later
+        # tickets give them role-specific landing pages.
         role = getattr(self.request.user, "role", None)
         role_redirects = {
-            "admin": "/",
+            "admin": "/admin-panel/",
             "editor": "/",
             "lector": "/",
         }

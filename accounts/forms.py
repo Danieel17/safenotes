@@ -4,6 +4,7 @@ from django import forms
 from django.conf import settings
 from django.contrib.auth import authenticate
 from django.contrib.auth.forms import AuthenticationForm
+from django.contrib.auth.password_validation import validate_password
 from django.utils import timezone
 
 from audit.models import AuditLog
@@ -84,3 +85,43 @@ class LockoutAwareAuthenticationForm(AuthenticationForm):
             existing_user.save(update_fields=["failed_login_count", "locked_until"])
 
         return self.cleaned_data
+
+
+class AdminUserCreationForm(forms.Form):
+    """Form used by an Admin to create a new Editor or Lector user.
+
+    Role choices are deliberately restricted to editor/lector - an Admin
+    account can only be created via ``createsuperuser`` or Django's own
+    ``/admin/`` site, never through this UI.
+    """
+
+    username = forms.CharField(max_length=150)
+    password = forms.CharField(widget=forms.PasswordInput)
+    role = forms.ChoiceField(
+        choices=[(User.ROLE_EDITOR, "Editor"), (User.ROLE_LECTOR, "Lector")]
+    )
+
+    def clean_username(self):
+        username = self.cleaned_data["username"]
+        if User.objects.filter(username=username).exists():
+            raise forms.ValidationError("Ya existe un usuario con ese nombre.")
+        return username
+
+    def clean_password(self):
+        password = self.cleaned_data["password"]
+        validate_password(password)
+        return password
+
+    def save(self):
+        user = User(username=self.cleaned_data["username"], role=self.cleaned_data["role"])
+        user.set_password(self.cleaned_data["password"])
+        user.save()
+        return user
+
+
+class UserRoleChangeForm(forms.Form):
+    """Change a non-admin user's role between editor and lector."""
+
+    role = forms.ChoiceField(
+        choices=[(User.ROLE_EDITOR, "Editor"), (User.ROLE_LECTOR, "Lector")]
+    )

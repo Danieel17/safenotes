@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Usuarios{% endblock %}
+{% block content %}
+<h1>Usuarios</h1>
+<a href="{% url 'user-create' %}" class="btn btn-primary mb-3">Nuevo usuario</a>
+<table class="table table-striped">
+    <thead>
+        <tr><th>Usuario</th><th>Rol</th><th>Activo</th><th>Bloqueado</th><th>Acciones</th></tr>
+    </thead>
+    <tbody>
+    {% for u in users %}
+        <tr>
+            <td>{{ u.username }}</td>
+            <td>{{ u.get_role_display }}</td>
+            <td>{{ u.is_active|yesno:"Sí,No" }}</td>
+            <td>{% if u.locked_until and u.locked_until > now %}Sí{% else %}No{% endif %}</td>
+            <td>
+                {% if u.role != "admin" %}
+                <form method="post" action="{% url 'user-toggle-active' u.pk %}" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-outline-warning"
+                        onclick="return confirm('¿Confirma {% if u.is_active %}desactivar{% else %}activar{% endif %} a {{ u.username }}?');">
+                        {% if u.is_active %}Desactivar{% else %}Activar{% endif %}
+                    </button>
+                </form>
+                <a href="{% url 'user-role-change' u.pk %}" class="btn btn-sm btn-outline-secondary">Cambiar rol</a>
+                {% else %}
+                <span class="text-muted">-</span>
+                {% endif %}
+            </td>
+        </tr>
+    {% empty %}
+        <tr><td colspan="5">No hay usuarios.</td></tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

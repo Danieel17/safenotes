@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Registro de auditoría{% endblock %}
+{% block content %}
+<h1>Registro de auditoría</h1>
+<form method="get" class="row g-2 mb-3">
+    <div class="col-auto">
+        <select name="action" class="form-select">
+            <option value="">-- Acción --</option>
+            {% for value, label in action_choices %}
+                <option value="{{ value }}" {% if value == action_filter %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="col-auto">
+        <input type="text" name="actor" value="{{ actor_filter }}" class="form-control" placeholder="Usuario">
+    </div>
+    <div class="col-auto">
+        <button type="submit" class="btn btn-primary">Filtrar</button>
+        <a href="{% url 'audit:log-list' %}" class="btn btn-secondary">Limpiar</a>
+    </div>
+</form>
+<table class="table table-striped">
+    <thead>
+        <tr><th>Fecha</th><th>Actor</th><th>Acción</th><th>Objetivo</th><th>IP</th></tr>
+    </thead>
+    <tbody>
+    {% for log in logs %}
+        <tr>
+            <td>{{ log.timestamp }}</td>
+            <td>{{ log.actor|default:"-" }}</td>
+            <td>{{ log.get_action_display }}</td>
+            <td>{{ log.target_repr }}</td>
+            <td>{{ log.ip_address|default:"-" }}</td>
+        </tr>
+    {% empty %}
+        <tr><td colspan="5">No hay registros.</td></tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% if is_paginated %}
+<nav>
+    <ul class="pagination">
+        {% if page_obj.has_previous %}
+            <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&action={{ action_filter }}&actor={{ actor_filter }}">Anterior</a></li>
+        {% endif %}
+        <li class="page-item disabled"><span class="page-link">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span></li>
+        {% if page_obj.has_next %}
+            <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&action={{ action_filter }}&actor={{ actor_filter }}">Siguiente</a></li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}

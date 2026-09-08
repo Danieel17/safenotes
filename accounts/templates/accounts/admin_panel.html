@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}Panel de administración{% endblock %}
+{% block content %}
+<h1>Panel de administración</h1>
+<div class="list-group" style="max-width: 400px;">
+    <a href="{% url 'user-list' %}" class="list-group-item list-group-item-action">Gestión de usuarios</a>
+    <a href="{% url 'notes:category-list' %}" class="list-group-item list-group-item-action">Gestión de categorías</a>
+    <a href="{% url 'audit:log-list' %}" class="list-group-item list-group-item-action">Registro de auditoría</a>
+</div>
+{% endblock %}
