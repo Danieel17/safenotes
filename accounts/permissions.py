@@ -1,8 +1,6 @@
-"""DRF permission classes mirroring accounts.mixins.RoleRequiredMixin.
+"""DRF permission classes for role-based access control.
 
-The existing MVT app uses ``RoleRequiredMixin`` (accounts/mixins.py) for
-class-based views. That mixin stays untouched. This module provides the
-DRF-idiom equivalent for API views/viewsets added in later tickets, using
+This module provides DRF-idiom role checks for API views/viewsets, using
 ``permission_classes = [IsAuthenticated, IsAdmin]`` list syntax.
 
 We use concrete subclasses (IsAdmin, IsEditor, IsLector) rather than a
@@ -10,9 +8,9 @@ parametrized factory (e.g. ``IsRole('admin')``) because DRF's declarative
 ``permission_classes`` list expects classes, not instances, which makes a
 factory awkward to use directly in that syntax.
 
-Like RoleRequiredMixin, these only check the user's *role* — they do not
-perform per-object ownership filtering. Each view/viewset remains
-responsible for filtering its own queryset.
+These only check the user's *role* -- they do not perform per-object
+ownership filtering. Each view/viewset remains responsible for filtering
+its own queryset.
 """
 from rest_framework.permissions import BasePermission
 

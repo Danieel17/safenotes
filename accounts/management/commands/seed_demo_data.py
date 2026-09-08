@@ -76,20 +76,26 @@ class Command(BaseCommand):
         }
 
         # --- Users ---------------------------------------------------
-        admin_user, created = self._get_or_create_user(ADMIN_USERNAME, User.ROLE_ADMIN)
+        admin_user, created = self._get_or_create_user(
+            ADMIN_USERNAME, User.ROLE_ADMIN, email="admin_demo@safenotes.local"
+        )
         created_summary["users"] += created
         self._report_user(admin_user, User.ROLE_ADMIN)
 
         editors = []
         for username in EDITOR_USERNAMES:
-            user, created = self._get_or_create_user(username, User.ROLE_EDITOR)
+            user, created = self._get_or_create_user(
+                username, User.ROLE_EDITOR, email=f"{username}@safenotes.local"
+            )
             created_summary["users"] += created
             editors.append(user)
             self._report_user(user, User.ROLE_EDITOR)
 
         lectors = []
         for username in LECTOR_USERNAMES:
-            user, created = self._get_or_create_user(username, User.ROLE_LECTOR)
+            user, created = self._get_or_create_user(
+                username, User.ROLE_LECTOR, email=f"{username}@safenotes.local"
+            )
             created_summary["users"] += created
             lectors.append(user)
             self._report_user(user, User.ROLE_LECTOR)
@@ -164,7 +170,7 @@ class Command(BaseCommand):
             f"folders={created_summary['folders']}"
         )
 
-    def _get_or_create_user(self, username, role):
+    def _get_or_create_user(self, username, role, email=""):
         """Get or create a demo user with the fixed demo password and role.
 
         Uses get_or_create + an explicit password/role sync on every run so
@@ -173,12 +179,13 @@ class Command(BaseCommand):
         """
         user, created = User.objects.get_or_create(
             username=username,
-            defaults={"role": role, "is_active": True},
+            defaults={"role": role, "is_active": True, "email": email},
         )
-        # Keep role/password/active status in sync even on re-runs, in case
-        # a previous run or manual edit left them in an unexpected state.
+        # Keep role/password/active status/email in sync even on re-runs, in
+        # case a previous run or manual edit left them in an unexpected state.
         user.role = role
         user.is_active = True
+        user.email = email
         user.set_password(DEMO_PASSWORD)
         user.save()
         return user, created

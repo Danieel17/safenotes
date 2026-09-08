@@ -7,9 +7,9 @@ class User(AbstractUser):
 
     Role is a plain field (not Django Groups/Permissions) because SafeNotes
     has exactly three fixed, mutually exclusive roles and all authorization
-    logic is simple "is this role allowed here" checks done in views via
-    RoleRequiredMixin - Groups/Permissions would be unnecessary machinery
-    for this scope.
+    logic is simple "is this role allowed here" checks done via DRF
+    permission classes (accounts.permissions) - Groups/Permissions would be
+    unnecessary machinery for this scope.
     """
 
     ROLE_ADMIN = "admin"

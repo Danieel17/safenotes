@@ -5,10 +5,18 @@ notes-taking application. It implements role-based access control (Admin /
 Editor / Lector), notes with content encrypted at rest, note sharing between
 users, personal folders for organizing shared notes, and an audit log that
 records security-relevant events (logins, logouts, lockouts, admin actions).
+
+The app is split into two independent servers:
+
+- A **Django REST Framework API** (JWT authentication) that owns all data
+  and business logic, served at `http://127.0.0.1:8000/api/`.
+- A **React (Vite) single-page app** that consumes that API, served at
+  `http://localhost:5173` in development.
+
 The full formal write-up of the design and security decisions lives in the
 separate report deliverable, not in this README.
 
-## Setup
+## Backend setup
 
 ```bash
 python -m venv venv
@@ -18,38 +26,58 @@ pip install -r requirements.txt
 cp .env.example .env
 ```
 
-Edit `.env` and fill in a real `NOTES_ENCRYPTION_KEY` (used to encrypt note
-content at rest). Generate one with:
+Edit `.env` and set:
 
-```bash
-python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
-```
+- `DJANGO_SECRET_KEY` — any long random string (local/demo use only).
+- `DJANGO_DEBUG` — `True` for local development.
+- `DJANGO_ALLOWED_HOSTS` — e.g. `127.0.0.1,localhost`.
+- `NOTES_ENCRYPTION_KEY` — used to encrypt note content at rest. Generate
+  one with:
 
-Paste the printed value as `NOTES_ENCRYPTION_KEY` in `.env`. Also set a real
-`DJANGO_SECRET_KEY` (any long random string works for local/demo use).
+  ```bash
+  python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+  ```
 
-Then apply migrations:
+Then apply migrations and seed demo data:
 
 ```bash
 python manage.py migrate
-```
-
-The repository ships with a pre-seeded `db.sqlite3` (see credentials table
-below), so this step is usually a no-op. If you want to regenerate the demo
-data from scratch (or you're starting from a fresh database), run:
-
-```bash
 python manage.py seed_demo_data
 ```
 
-This command is idempotent — running it again updates the same demo rows
-instead of duplicating them, and prints the demo credentials to stdout.
+`seed_demo_data` is idempotent — running it again updates the same demo
+rows instead of duplicating them, and prints the demo credentials to
+stdout.
 
-Finally, start the dev server:
+Finally, start the API server:
 
 ```bash
 python manage.py runserver
 ```
+
+The API is now available at `http://127.0.0.1:8000/api/`. There is no
+server-rendered UI at `/` — the app is consumed entirely through the React
+frontend below (or directly via the API).
+
+## Frontend setup
+
+In a second terminal:
+
+```bash
+cd frontend
+cp .env.example .env
+```
+
+`.env` sets `VITE_API_BASE_URL` (defaults to
+`http://127.0.0.1:8000/api/`, matching the backend above).
+
+```bash
+npm install
+npm run dev
+```
+
+The SPA is served at `http://localhost:5173` (Vite's default) and talks to
+the Django API over HTTP using JWT access/refresh tokens.
 
 ## Demo credentials
 
@@ -65,21 +93,26 @@ All seeded demo accounts share the same password: **`SafeNotes2026!`**
 
 ## Where to click, per role
 
-After logging in at `/login/`, each role is redirected to its own landing
-page:
+After logging in through the React app, each role uses a different set of
+routes:
 
-- **Admin** (`admin_demo`) -> `/admin-panel/`
-  User management (create users, toggle active, change role), Category
-  CRUD (`/notes/categories/`), and the audit log (`/audit/`).
-- **Editor** (`editor1`, `editor2`) -> `/notes/`
+- **Admin** (`admin_demo`) -> `/admin`
+  User management (create users, toggle active, change role), category
+  CRUD, and the audit log.
+- **Editor** (`editor1`, `editor2`) -> `/notes`
   Their own notes: create, edit, delete, and share notes with Lector
-  accounts (`/notes/<id>/share/`).
-- **Lector** (`lector1`, `lector2`) -> `/notes/shared/`
-  Notes shared with them (read-only), plus personal folders
-  (`/notes/folders/`) for organizing those shared notes.
+  accounts.
+- **Lector** (`lector1`, `lector2`) -> `/shared` and `/folders`
+  Notes shared with them (read-only) and personal folders for organizing
+  those shared notes.
 
 ## Running tests
+
+Backend:
 
 ```bash
 python manage.py test
 ```
+
+There are no automated frontend tests — verifying the React app is out of
+scope for this project and was instead done manually against the live API.
