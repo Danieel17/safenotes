@@ -4,11 +4,17 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from accounts.permissions import IsAdmin, IsEditor
+from accounts.permissions import IsAdmin, IsEditor, IsLector
 from audit.services import log_action
 
-from .models import Category, Note, Share
-from .serializers import CategorySerializer, NoteSerializer, ShareSerializer
+from .models import Category, Folder, FolderItem, Note, Share
+from .serializers import (
+    CategorySerializer,
+    FolderSerializer,
+    NoteSerializer,
+    ShareSerializer,
+    SharedNoteSerializer,
+)
 
 
 class CategoryViewSet(viewsets.ModelViewSet):
@@ -121,3 +127,76 @@ class NoteViewSet(viewsets.ModelViewSet):
             {"detail": "No existe un share con ese usuario."},
             status=status.HTTP_404_NOT_FOUND,
         )
+
+
+class SharedNoteViewSet(viewsets.ReadOnlyModelViewSet):
+    """Lector-only read access to notes shared with them, plus the
+    add-to-folder action. ``get_queryset`` is filtered to shares addressed to
+    the requesting user - the same IDOR-prevention pattern as ``NoteViewSet``:
+    a share id that exists but belongs to another lector 404s instead of
+    leaking existence via a 403.
+    """
+
+    permission_classes = [IsAuthenticated, IsLector]
+    serializer_class = SharedNoteSerializer
+
+    def get_queryset(self):
+        return Share.objects.filter(shared_with=self.request.user).select_related(
+            "note", "note__owner", "note__category"
+        ).order_by("-created_at")
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        log_action(
+            actor=request.user,
+            action="note_viewed",
+            target_repr=f"Note:{instance.note.pk}",
+            request=request,
+        )
+        return Response(serializer.data)
+
+    @action(detail=True, methods=["post"], url_path="add-to-folder")
+    def add_to_folder(self, request, pk=None):
+        share = self.get_object()
+        folder_id = request.data.get("folder_id")
+        folder = Folder.objects.filter(pk=folder_id, owner=request.user).first()
+        if folder is None:
+            return Response(
+                {"detail": "Carpeta no encontrada."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        if FolderItem.objects.filter(folder=folder, share=share).exists():
+            return Response(
+                {"detail": "Ya estaba en esa carpeta."},
+                status=status.HTTP_200_OK,
+            )
+
+        try:
+            FolderItem.objects.create(folder=folder, share=share)
+        except IntegrityError:
+            return Response(
+                {"detail": "Ya estaba en esa carpeta."},
+                status=status.HTTP_200_OK,
+            )
+
+        return Response(
+            {"detail": "Nota agregada a la carpeta."}, status=status.HTTP_201_CREATED
+        )
+
+
+class FolderViewSet(viewsets.ModelViewSet):
+    """Lector-owned folder CRUD. ``get_queryset`` is filtered to folders
+    owned by the requesting user - the IDOR-prevention mechanism, same
+    pattern as ``NoteViewSet``.
+    """
+
+    permission_classes = [IsAuthenticated, IsLector]
+    serializer_class = FolderSerializer
+
+    def get_queryset(self):
+        return Folder.objects.filter(owner=self.request.user).order_by("-created_at")
+
+    def perform_create(self, serializer):
+        serializer.save(owner=self.request.user)

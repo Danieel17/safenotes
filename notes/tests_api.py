@@ -199,3 +199,147 @@ class NoteApiTests(TestCase):
         )
         self.assertEqual(response.status_code, 204)
         self.assertFalse(Share.objects.filter(note=note, shared_with=self.lector).exists())
+
+
+from .models import Folder, FolderItem
+
+
+class SharedNoteAndFolderApiTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.editor = User.objects.create_user(
+            username="sn_editor1", password="SafeNotes2026!", role="editor"
+        )
+        self.lector1 = User.objects.create_user(
+            username="sn_lector1", password="SafeNotes2026!", role="lector"
+        )
+        self.lector2 = User.objects.create_user(
+            username="sn_lector2", password="SafeNotes2026!", role="lector"
+        )
+        self.admin = User.objects.create_user(
+            username="sn_admin1", password="SafeNotes2026!", role="admin"
+        )
+        self.note1 = Note.objects.create(owner=self.editor, title="Note1", content="c1")
+        self.note2 = Note.objects.create(owner=self.editor, title="Note2", content="c2")
+        self.share1 = Share.objects.create(note=self.note1, shared_with=self.lector1)
+        self.share2 = Share.objects.create(note=self.note2, shared_with=self.lector2)
+
+        self.shared_notes_url = reverse("shared-note-list")
+        self.folders_url = reverse("folder-list")
+
+    def _authenticate(self, username, password="SafeNotes2026!"):
+        token_url = reverse("api-token-obtain-pair")
+        response = self.client.post(
+            token_url, {"username": username, "password": password}, format="json"
+        )
+        access = response.data["access"]
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {access}")
+
+    def _shared_note_detail_url(self, pk):
+        return reverse("shared-note-detail", args=[pk])
+
+    def _add_to_folder_url(self, pk):
+        return reverse("shared-note-add-to-folder", args=[pk])
+
+    def _folder_detail_url(self, pk):
+        return reverse("folder-detail", args=[pk])
+
+    def test_lector_sees_only_own_shares(self):
+        self._authenticate("sn_lector1")
+        response = self.client.get(self.shared_notes_url)
+        self.assertEqual(response.status_code, 200)
+        returned_ids = [item["id"] for item in response.data["results"]]
+        self.assertIn(self.share1.pk, returned_ids)
+        self.assertNotIn(self.share2.pk, returned_ids)
+
+    def test_accessing_another_lectors_share_returns_404(self):
+        self._authenticate("sn_lector1")
+        response = self.client.get(self._shared_note_detail_url(self.share2.pk))
+        self.assertEqual(response.status_code, 404)
+
+    def test_shared_note_detail_logs_one_audit_row_per_request(self):
+        self._authenticate("sn_lector1")
+        response = self.client.get(self._shared_note_detail_url(self.share1.pk))
+        self.assertEqual(response.status_code, 200)
+        response = self.client.get(self._shared_note_detail_url(self.share1.pk))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            AuditLog.objects.filter(
+                action="note_viewed", actor=self.lector1
+            ).count(),
+            2,
+        )
+
+    def test_folder_create_add_delete_preserves_note_and_share(self):
+        self._authenticate("sn_lector1")
+
+        response = self.client.post(self.folders_url, {"name": "My Folder"}, format="json")
+        self.assertEqual(response.status_code, 201)
+        folder_id = response.data["id"]
+
+        response = self.client.post(
+            self._add_to_folder_url(self.share1.pk),
+            {"folder_id": folder_id},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 201)
+        self.assertTrue(
+            FolderItem.objects.filter(folder_id=folder_id, share=self.share1).exists()
+        )
+
+        response = self.client.delete(self._folder_detail_url(folder_id))
+        self.assertEqual(response.status_code, 204)
+
+        self.assertFalse(
+            FolderItem.objects.filter(folder_id=folder_id, share=self.share1).exists()
+        )
+        self.assertTrue(Note.objects.filter(pk=self.note1.pk).exists())
+        self.assertTrue(Share.objects.filter(pk=self.share1.pk).exists())
+
+    def test_adding_same_share_to_folder_twice_is_graceful_noop(self):
+        self._authenticate("sn_lector1")
+        response = self.client.post(self.folders_url, {"name": "Dup Folder"}, format="json")
+        folder_id = response.data["id"]
+
+        response = self.client.post(
+            self._add_to_folder_url(self.share1.pk),
+            {"folder_id": folder_id},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 201)
+
+        response = self.client.post(
+            self._add_to_folder_url(self.share1.pk),
+            {"folder_id": folder_id},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200)
+
+        self.assertEqual(
+            FolderItem.objects.filter(folder_id=folder_id, share=self.share1).count(), 1
+        )
+
+    def test_lector_cannot_patch_editors_note_endpoint(self):
+        self._authenticate("sn_lector1")
+        note_detail_url = reverse("note-detail", args=[self.note1.pk])
+        response = self.client.patch(note_detail_url, {"title": "Hacked"}, format="json")
+        self.assertEqual(response.status_code, 403)
+
+    def test_editor_and_admin_forbidden_from_shared_note_and_folder_endpoints(self):
+        self._authenticate("sn_editor1")
+        response = self.client.get(self.shared_notes_url)
+        self.assertEqual(response.status_code, 403)
+        response = self.client.get(self.folders_url)
+        self.assertEqual(response.status_code, 403)
+
+        self._authenticate("sn_admin1")
+        response = self.client.get(self.shared_notes_url)
+        self.assertEqual(response.status_code, 403)
+        response = self.client.get(self.folders_url)
+        self.assertEqual(response.status_code, 403)
+
+    def test_accessing_another_lectors_folder_returns_404(self):
+        folder = Folder.objects.create(owner=self.lector2, name="L2 Folder")
+        self._authenticate("sn_lector1")
+        response = self.client.get(self._folder_detail_url(folder.pk))
+        self.assertEqual(response.status_code, 404)
