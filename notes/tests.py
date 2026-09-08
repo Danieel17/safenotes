@@ -3,7 +3,9 @@ from django.urls import reverse
 
 from accounts.models import User
 
-from .models import Category
+from audit.models import AuditLog
+
+from .models import Category, Folder, FolderItem, Note, Share
 
 
 class CategoryManagementTests(TestCase):
@@ -220,3 +222,172 @@ class EditorNoteSharingTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertFalse(Note.objects.filter(pk=note_pk).exists())
         self.assertFalse(Share.objects.filter(note_id=note_pk).exists())
+
+
+class LectorSharedNoteVisibilityTests(TestCase):
+    def setUp(self):
+        self.editor = User.objects.create_user(
+            username="lsv_editor", password="pass12345", role="editor"
+        )
+        self.lector_a = User.objects.create_user(
+            username="lsv_lectora", password="pass12345", role="lector"
+        )
+        self.lector_b = User.objects.create_user(
+            username="lsv_lectorb", password="pass12345", role="lector"
+        )
+        self.note = Note.objects.create(
+            owner=self.editor, title="Private-ish", content="secret content"
+        )
+        self.share = Share.objects.create(note=self.note, shared_with=self.lector_a)
+
+    def test_lector_sees_only_own_shared_notes(self):
+        self.client.login(username="lsv_lectora", password="pass12345")
+        response = self.client.get(reverse("notes:shared-note-list"))
+        self.assertContains(response, "Private-ish")
+
+        self.client.logout()
+        self.client.login(username="lsv_lectorb", password="pass12345")
+        response = self.client.get(reverse("notes:shared-note-list"))
+        self.assertNotContains(response, "Private-ish")
+
+    def test_lector_cannot_view_note_not_shared_with_them(self):
+        self.client.login(username="lsv_lectorb", password="pass12345")
+        response = self.client.get(
+            reverse("notes:shared-note-detail", args=[self.share.pk])
+        )
+        self.assertEqual(response.status_code, 404)
+
+    def test_viewing_shared_note_logs_note_viewed_once(self):
+        self.client.login(username="lsv_lectora", password="pass12345")
+        response = self.client.get(
+            reverse("notes:shared-note-detail", args=[self.share.pk])
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "secret content")
+        self.assertEqual(
+            AuditLog.objects.filter(
+                action=AuditLog.ACTION_NOTE_VIEWED,
+                target_repr=f"Note:{self.note.pk}",
+            ).count(),
+            1,
+        )
+
+
+class LectorFolderCrudTests(TestCase):
+    def setUp(self):
+        self.editor = User.objects.create_user(
+            username="lfc_editor", password="pass12345", role="editor"
+        )
+        self.lector = User.objects.create_user(
+            username="lfc_lector", password="pass12345", role="lector"
+        )
+        self.other_lector = User.objects.create_user(
+            username="lfc_other", password="pass12345", role="lector"
+        )
+        self.note = Note.objects.create(
+            owner=self.editor, title="Folder note", content="content"
+        )
+        self.share = Share.objects.create(note=self.note, shared_with=self.lector)
+
+    def test_full_folder_lifecycle(self):
+        self.client.login(username="lfc_lector", password="pass12345")
+
+        # Create
+        response = self.client.post(
+            reverse("notes:folder-create"), {"name": "My folder"}
+        )
+        self.assertEqual(response.status_code, 302)
+        folder = Folder.objects.get(name="My folder", owner=self.lector)
+
+        # Add shared note to folder
+        response = self.client.post(
+            reverse("notes:shared-note-add-to-folder", args=[self.share.pk]),
+            {"folder": folder.pk},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(
+            FolderItem.objects.filter(folder=folder, share=self.share).count(), 1
+        )
+
+        # Adding the same note twice does not crash or duplicate
+        response = self.client.post(
+            reverse("notes:shared-note-add-to-folder", args=[self.share.pk]),
+            {"folder": folder.pk},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(
+            FolderItem.objects.filter(folder=folder, share=self.share).count(), 1
+        )
+
+        # Rename
+        response = self.client.post(
+            reverse("notes:folder-update", args=[folder.pk]), {"name": "Renamed"}
+        )
+        self.assertEqual(response.status_code, 302)
+        folder.refresh_from_db()
+        self.assertEqual(folder.name, "Renamed")
+
+        # Delete: removes FolderItem, keeps Note and Share
+        note_pk = self.note.pk
+        share_pk = self.share.pk
+        response = self.client.post(reverse("notes:folder-delete", args=[folder.pk]))
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(Folder.objects.filter(pk=folder.pk).exists())
+        self.assertFalse(FolderItem.objects.filter(folder_id=folder.pk).exists())
+        self.assertTrue(Note.objects.filter(pk=note_pk).exists())
+        self.assertTrue(Share.objects.filter(pk=share_pk).exists())
+
+    def test_cannot_add_another_lectors_share_via_own_folder(self):
+        self.client.login(username="lfc_other", password="pass12345")
+        response = self.client.post(
+            reverse("notes:folder-create"), {"name": "Other folder"}
+        )
+        self.assertEqual(response.status_code, 302)
+        other_folder = Folder.objects.get(name="Other folder", owner=self.other_lector)
+
+        # other_lector tries to add lfc_lector's share into their own folder
+        response = self.client.post(
+            reverse("notes:shared-note-add-to-folder", args=[self.share.pk]),
+            {"folder": other_folder.pk},
+        )
+        # The share lookup itself is scoped to shared_with=request.user, so
+        # a share that isn't theirs simply isn't found.
+        self.assertEqual(response.status_code, 404)
+        self.assertFalse(FolderItem.objects.filter(folder=other_folder).exists())
+
+    def test_cannot_view_another_lectors_folder(self):
+        folder = Folder.objects.create(owner=self.lector, name="Mine")
+        self.client.login(username="lfc_other", password="pass12345")
+        response = self.client.get(reverse("notes:folder-detail", args=[folder.pk]))
+        self.assertEqual(response.status_code, 404)
+
+
+class LectorCannotMutateNotesTests(TestCase):
+    def setUp(self):
+        self.editor = User.objects.create_user(
+            username="lcm_editor", password="pass12345", role="editor"
+        )
+        self.lector = User.objects.create_user(
+            username="lcm_lector", password="pass12345", role="lector"
+        )
+        self.note = Note.objects.create(
+            owner=self.editor, title="Original title", content="original content"
+        )
+        Share.objects.create(note=self.note, shared_with=self.lector)
+
+    def test_lector_post_to_editor_update_url_is_forbidden(self):
+        self.client.login(username="lcm_lector", password="pass12345")
+        response = self.client.post(
+            reverse("notes:note-update", args=[self.note.pk]),
+            {"title": "Hacked", "content": "hacked content"},
+        )
+        self.assertEqual(response.status_code, 403)
+        self.note.refresh_from_db()
+        self.assertEqual(self.note.title, "Original title")
+        self.assertEqual(self.note.content, "original content")
+
+    def test_lector_post_to_editor_delete_url_is_forbidden(self):
+        self.client.login(username="lcm_lector", password="pass12345")
+        response = self.client.post(reverse("notes:note-delete", args=[self.note.pk]))
+        self.assertEqual(response.status_code, 403)
+        self.assertTrue(Note.objects.filter(pk=self.note.pk).exists())

@@ -17,4 +17,14 @@ urlpatterns = [
     path("<int:pk>/delete/", views.NoteDeleteView.as_view(), name="note-delete"),
     path("<int:pk>/share/", views.NoteShareCreateView.as_view(), name="note-share"),
     path("<int:pk>/share/<int:share_pk>/delete/", views.NoteShareDeleteView.as_view(), name="note-unshare"),
+
+    path("shared/", views.SharedNoteListView.as_view(), name="shared-note-list"),
+    path("shared/<int:share_pk>/", views.SharedNoteDetailView.as_view(), name="shared-note-detail"),
+    path("shared/<int:share_pk>/add-to-folder/", views.AddShareToFolderView.as_view(), name="shared-note-add-to-folder"),
+
+    path("folders/", views.FolderListView.as_view(), name="folder-list"),
+    path("folders/create/", views.FolderCreateView.as_view(), name="folder-create"),
+    path("folders/<int:pk>/", views.FolderDetailView.as_view(), name="folder-detail"),
+    path("folders/<int:pk>/edit/", views.FolderUpdateView.as_view(), name="folder-update"),
+    path("folders/<int:pk>/delete/", views.FolderDeleteView.as_view(), name="folder-delete"),
 ]

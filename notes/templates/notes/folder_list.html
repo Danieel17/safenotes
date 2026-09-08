@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Mis carpetas{% endblock %}
+{% block content %}
+<h1>Mis carpetas</h1>
+<a href="{% url 'notes:folder-create' %}" class="btn btn-primary mb-3">Nueva carpeta</a>
+<a href="{% url 'notes:shared-note-list' %}" class="btn btn-outline-secondary mb-3">Notas compartidas</a>
+<table class="table table-striped">
+    <thead>
+        <tr><th>Nombre</th><th>Creada</th><th>Acciones</th></tr>
+    </thead>
+    <tbody>
+    {% for folder in folders %}
+        <tr>
+            <td><a href="{% url 'notes:folder-detail' folder.pk %}">{{ folder.name }}</a></td>
+            <td>{{ folder.created_at }}</td>
+            <td>
+                <a href="{% url 'notes:folder-update' folder.pk %}" class="btn btn-sm btn-outline-secondary">Renombrar</a>
+                <a href="{% url 'notes:folder-delete' folder.pk %}" class="btn btn-sm btn-outline-danger">Eliminar</a>
+            </td>
+        </tr>
+    {% empty %}
+        <tr><td colspan="3">No tienes carpetas todavía.</td></tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

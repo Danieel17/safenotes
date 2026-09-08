@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Eliminar carpeta{% endblock %}
+{% block content %}
+<h1>Eliminar carpeta</h1>
+<p>¿Confirma eliminar la carpeta "{{ object.name }}"? Esto quitará las notas que contiene de la carpeta, pero no eliminará las notas ni el hecho de que fueron compartidas contigo.</p>
+<form method="post">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-danger">Eliminar</button>
+    <a href="{% url 'notes:folder-list' %}" class="btn btn-secondary">Cancelar</a>
+</form>
+{% endblock %}

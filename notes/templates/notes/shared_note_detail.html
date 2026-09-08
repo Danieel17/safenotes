@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}{{ note.title }}{% endblock %}
+{% block content %}
+<h1>{{ note.title }}</h1>
+<p><strong>Propietario:</strong> {{ note.owner.username }}</p>
+<p><strong>Categoría:</strong> {{ note.category|default:"—" }}</p>
+<pre>{{ note.content }}</pre>
+
+<a href="{% url 'notes:shared-note-list' %}" class="btn btn-secondary">Volver</a>
+
+{% if messages %}
+<ul class="list-unstyled mt-3">
+    {% for message in messages %}
+        <li class="alert alert-info">{{ message }}</li>
+    {% endfor %}
+</ul>
+{% endif %}
+
+<hr>
+<h3>Agregar a una carpeta</h3>
+{% if add_to_folder_form.fields.folder.queryset.exists %}
+<form method="post" action="{% url 'notes:shared-note-add-to-folder' share.pk %}" class="row g-2 align-items-end">
+    {% csrf_token %}
+    <div class="col-auto">{{ add_to_folder_form.folder }}</div>
+    <div class="col-auto"><button type="submit" class="btn btn-primary">Agregar</button></div>
+</form>
+{% else %}
+<p>No tienes carpetas todavía. <a href="{% url 'notes:folder-create' %}">Crea una</a>.</p>
+{% endif %}
+{% endblock %}

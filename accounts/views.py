@@ -29,7 +29,7 @@ class SafeNotesLoginView(LoginView):
         role_redirects = {
             "admin": "/admin-panel/",
             "editor": "/notes/",
-            "lector": "/",
+            "lector": "/notes/shared/",
         }
         return role_redirects.get(role, "/")
 

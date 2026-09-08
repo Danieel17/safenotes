@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Notas compartidas conmigo{% endblock %}
+{% block content %}
+<h1>Notas compartidas conmigo</h1>
+<a href="{% url 'notes:folder-list' %}" class="btn btn-outline-primary mb-3">Mis carpetas</a>
+
+{% if messages %}
+<ul class="list-unstyled">
+    {% for message in messages %}
+        <li class="alert alert-info">{{ message }}</li>
+    {% endfor %}
+</ul>
+{% endif %}
+
+<table class="table table-striped">
+    <thead>
+        <tr><th>Título</th><th>Propietario</th><th>Categoría</th></tr>
+    </thead>
+    <tbody>
+    {% for share in shares %}
+        <tr>
+            <td><a href="{% url 'notes:shared-note-detail' share.pk %}">{{ share.note.title }}</a></td>
+            <td>{{ share.note.owner.username }}</td>
+            <td>{{ share.note.category|default:"—" }}</td>
+        </tr>
+    {% empty %}
+        <tr><td colspan="3">Todavía no tienes notas compartidas.</td></tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
