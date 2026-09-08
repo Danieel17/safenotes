@@ -160,3 +160,12 @@ CSRF_COOKIE_HTTPONLY = True
 # Custom user model (accounts app) - must be set before any migrations
 # that reference the User model are created/applied.
 AUTH_USER_MODEL = "accounts.User"
+
+# Account lockout policy (ticket 03).
+LOGIN_LOCKOUT_THRESHOLD = 5
+LOGIN_LOCKOUT_MINUTES = 15
+
+LOGIN_URL = "login"
+LOGIN_REDIRECT_URL = "/"
+LOGOUT_REDIRECT_URL = "/"
+
