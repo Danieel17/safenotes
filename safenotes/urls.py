@@ -11,5 +11,6 @@ urlpatterns = [
     path('', include('accounts.urls')),
     path('notes/', include('notes.urls')),
     path('audit/', include('audit.urls')),
+    path('api/', include('safenotes.api_urls')),
     path('', views.home, name='home'),
 ]
