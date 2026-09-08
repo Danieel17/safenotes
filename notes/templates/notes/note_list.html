@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Mis notas{% endblock %}
+{% block content %}
+<h1>Mis notas</h1>
+<a href="{% url 'notes:note-create' %}" class="btn btn-primary mb-3">Nueva nota</a>
+<table class="table table-striped">
+    <thead>
+        <tr><th>Título</th><th>Categoría</th><th>Actualizada</th><th>Acciones</th></tr>
+    </thead>
+    <tbody>
+    {% for note in notes %}
+        <tr>
+            <td><a href="{% url 'notes:note-detail' note.pk %}">{{ note.title }}</a></td>
+            <td>{{ note.category|default:"—" }}</td>
+            <td>{{ note.updated_at }}</td>
+            <td>
+                <a href="{% url 'notes:note-update' note.pk %}" class="btn btn-sm btn-outline-secondary">Editar</a>
+                <a href="{% url 'notes:note-delete' note.pk %}" class="btn btn-sm btn-outline-danger">Eliminar</a>
+            </td>
+        </tr>
+    {% empty %}
+        <tr><td colspan="4">No tienes notas todavía.</td></tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

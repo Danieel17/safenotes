@@ -28,7 +28,7 @@ class SafeNotesLoginView(LoginView):
         role = getattr(self.request.user, "role", None)
         role_redirects = {
             "admin": "/admin-panel/",
-            "editor": "/",
+            "editor": "/notes/",
             "lector": "/",
         }
         return role_redirects.get(role, "/")

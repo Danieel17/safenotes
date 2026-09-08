@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Nota{% endblock %}
+{% block content %}
+<h1>{% if object %}Editar{% else %}Nueva{% endif %} nota</h1>
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit" class="btn btn-primary">Guardar</button>
+    <a href="{% url 'notes:note-list' %}" class="btn btn-secondary">Cancelar</a>
+</form>
+{% endblock %}
