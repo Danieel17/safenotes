@@ -8,7 +8,9 @@ import UsersPage from "./pages/admin/UsersPage";
 import CategoriesPage from "./pages/admin/CategoriesPage";
 import AuditLogPage from "./pages/admin/AuditLogPage";
 import ProfilePage from "./pages/shared/ProfilePage";
-import EditorHome from "./pages/editor/EditorHome";
+import NotesListPage from "./pages/editor/NotesListPage";
+import NoteFormPage from "./pages/editor/NoteFormPage";
+import NoteDetailPage from "./pages/editor/NoteDetailPage";
 import LectorHome from "./pages/lector/LectorHome";
 
 const ROLE_LANDING = {
@@ -88,7 +90,37 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <RoleRoute role="editor">
-              <EditorHome />
+              <NotesListPage />
+            </RoleRoute>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/notes/new"
+        element={
+          <ProtectedRoute>
+            <RoleRoute role="editor">
+              <NoteFormPage />
+            </RoleRoute>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/notes/:id"
+        element={
+          <ProtectedRoute>
+            <RoleRoute role="editor">
+              <NoteDetailPage />
+            </RoleRoute>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/notes/:id/edit"
+        element={
+          <ProtectedRoute>
+            <RoleRoute role="editor">
+              <NoteFormPage />
             </RoleRoute>
           </ProtectedRoute>
         }
