@@ -33,6 +33,26 @@ export default function Layout({ children }) {
           <Link className="nav-link" to={homeLink}>
             <i className="bi bi-house-door" /> Inicio
           </Link>
+
+          {role === "admin" && (
+            <>
+              <span className="sn-section-title">Administración</span>
+              <Link className="nav-link" to="/admin/users">
+                <i className="bi bi-people" /> Usuarios
+              </Link>
+              <Link className="nav-link" to="/admin/categories">
+                <i className="bi bi-tags" /> Categorías
+              </Link>
+              <Link className="nav-link" to="/admin/audit-log">
+                <i className="bi bi-journal-text" /> Auditoría
+              </Link>
+            </>
+          )}
+
+          <span className="sn-section-title">Cuenta</span>
+          <Link className="nav-link" to="/profile">
+            <i className="bi bi-person-circle" /> Mi Perfil
+          </Link>
         </nav>
 
         <div className="sn-logout">
