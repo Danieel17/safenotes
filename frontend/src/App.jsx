@@ -11,7 +11,10 @@ import ProfilePage from "./pages/shared/ProfilePage";
 import NotesListPage from "./pages/editor/NotesListPage";
 import NoteFormPage from "./pages/editor/NoteFormPage";
 import NoteDetailPage from "./pages/editor/NoteDetailPage";
-import LectorHome from "./pages/lector/LectorHome";
+import SharedNotesPage from "./pages/lector/SharedNotesPage";
+import SharedNoteDetailPage from "./pages/lector/SharedNoteDetailPage";
+import FoldersPage from "./pages/lector/FoldersPage";
+import FolderDetailPage from "./pages/lector/FolderDetailPage";
 
 const ROLE_LANDING = {
   admin: "/admin",
@@ -130,7 +133,37 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <RoleRoute role="lector">
-              <LectorHome />
+              <SharedNotesPage />
+            </RoleRoute>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/shared/:shareId"
+        element={
+          <ProtectedRoute>
+            <RoleRoute role="lector">
+              <SharedNoteDetailPage />
+            </RoleRoute>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/folders"
+        element={
+          <ProtectedRoute>
+            <RoleRoute role="lector">
+              <FoldersPage />
+            </RoleRoute>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/folders/:id"
+        element={
+          <ProtectedRoute>
+            <RoleRoute role="lector">
+              <FolderDetailPage />
             </RoleRoute>
           </ProtectedRoute>
         }

@@ -58,6 +58,18 @@ export default function Layout({ children }) {
             </>
           )}
 
+          {role === "lector" && (
+            <>
+              <span className="sn-section-title">Lector</span>
+              <Link className="nav-link" to="/shared">
+                <i className="bi bi-journal-text" /> Notas compartidas
+              </Link>
+              <Link className="nav-link" to="/folders">
+                <i className="bi bi-folder2" /> Carpetas
+              </Link>
+            </>
+          )}
+
           <span className="sn-section-title">Cuenta</span>
           <Link className="nav-link" to="/profile">
             <i className="bi bi-person-circle" /> Mi Perfil
