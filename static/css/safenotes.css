@@ -1,0 +1,234 @@
+:root {
+    --sn-primary: #2f5fda;
+    --sn-primary-dark: #1e3f9e;
+    --sn-bg: #f5f7fb;
+    --sn-surface: #ffffff;
+    --sn-sidebar-bg: #16213e;
+    --sn-sidebar-fg: #cdd6f0;
+    --sn-sidebar-hover: rgba(255, 255, 255, 0.08);
+    --sn-border: #e3e7f0;
+    --sn-muted: #6b7280;
+    --sn-radius: 0.6rem;
+}
+
+body {
+    background-color: var(--sn-bg);
+    color: #1f2937;
+}
+
+/* ---------- Layout shell ---------- */
+.sn-layout {
+    min-height: 100vh;
+}
+
+.sn-sidebar {
+    background-color: var(--sn-sidebar-bg);
+    color: var(--sn-sidebar-fg);
+    width: 260px;
+    flex-shrink: 0;
+    padding: 1.25rem 1rem;
+    display: flex;
+    flex-direction: column;
+}
+
+.sn-sidebar .sn-brand {
+    color: #ffffff;
+    font-weight: 700;
+    font-size: 1.25rem;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.sn-sidebar .sn-user-box {
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: var(--sn-radius);
+    padding: 0.75rem 0.9rem;
+    margin-bottom: 1.25rem;
+}
+
+.sn-sidebar .sn-user-box .sn-username {
+    color: #fff;
+    font-weight: 600;
+    display: block;
+}
+
+.sn-sidebar .nav-link {
+    color: var(--sn-sidebar-fg);
+    border-radius: var(--sn-radius);
+    padding: 0.55rem 0.75rem;
+    margin-bottom: 0.2rem;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: 0.94rem;
+}
+
+.sn-sidebar .nav-link:hover {
+    background-color: var(--sn-sidebar-hover);
+    color: #fff;
+}
+
+.sn-sidebar .nav-link.active {
+    background-color: var(--sn-primary);
+    color: #fff;
+}
+
+.sn-sidebar .sn-section-title {
+    text-transform: uppercase;
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+    color: rgba(255, 255, 255, 0.45);
+    margin: 1rem 0 0.35rem 0.75rem;
+}
+
+.sn-sidebar .sn-logout {
+    margin-top: auto;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.sn-content {
+    flex-grow: 1;
+    min-width: 0;
+}
+
+.sn-topbar {
+    display: none;
+    background-color: var(--sn-surface);
+    border-bottom: 1px solid var(--sn-border);
+    padding: 0.6rem 1rem;
+}
+
+@media (max-width: 991.98px) {
+    .sn-sidebar {
+        display: none;
+    }
+    .sn-topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+}
+
+.sn-main {
+    padding: 1.75rem;
+}
+
+/* ---------- Cards ---------- */
+.sn-card {
+    border: 1px solid var(--sn-border);
+    border-radius: var(--sn-radius);
+    background-color: var(--sn-surface);
+    transition: box-shadow 0.15s ease, transform 0.15s ease;
+    height: 100%;
+}
+
+.sn-card:hover {
+    box-shadow: 0 0.5rem 1.25rem rgba(22, 33, 62, 0.08);
+    transform: translateY(-2px);
+}
+
+.sn-card .card-title {
+    font-weight: 600;
+}
+
+.sn-card .sn-card-actions {
+    border-top: 1px solid var(--sn-border);
+    padding-top: 0.6rem;
+    margin-top: 0.6rem;
+}
+
+/* ---------- Buttons / accents ---------- */
+.btn-primary {
+    background-color: var(--sn-primary);
+    border-color: var(--sn-primary);
+}
+
+.btn-primary:hover,
+.btn-primary:focus {
+    background-color: var(--sn-primary-dark);
+    border-color: var(--sn-primary-dark);
+}
+
+.btn-outline-primary {
+    color: var(--sn-primary);
+    border-color: var(--sn-primary);
+}
+
+.btn-outline-primary:hover {
+    background-color: var(--sn-primary);
+    border-color: var(--sn-primary);
+}
+
+a {
+    color: var(--sn-primary);
+}
+
+/* ---------- Role badges ---------- */
+.sn-badge-admin { background-color: #7c3aed; }
+.sn-badge-editor { background-color: #2f5fda; }
+.sn-badge-lector { background-color: #0d9488; }
+
+/* ---------- Empty state ---------- */
+.sn-empty-state {
+    text-align: center;
+    padding: 3rem 1.5rem;
+    border: 1px dashed var(--sn-border);
+    border-radius: var(--sn-radius);
+    background-color: var(--sn-surface);
+    color: var(--sn-muted);
+}
+
+.sn-empty-state .sn-empty-icon {
+    font-size: 2.5rem;
+    color: var(--sn-primary);
+    margin-bottom: 0.75rem;
+    display: block;
+}
+
+/* ---------- Login page ---------- */
+.sn-auth-wrapper {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--sn-bg);
+    padding: 1rem;
+}
+
+.sn-auth-card {
+    width: 100%;
+    max-width: 400px;
+    border: 1px solid var(--sn-border);
+    border-radius: var(--sn-radius);
+    box-shadow: 0 0.75rem 2rem rgba(22, 33, 62, 0.08);
+}
+
+/* ---------- Tables ---------- */
+.table thead th {
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.04em;
+    color: var(--sn-muted);
+    border-bottom-width: 1px;
+}
+
+/* ---------- Confirm delete card ---------- */
+.sn-confirm-card {
+    max-width: 480px;
+    margin: 2rem auto;
+    text-align: center;
+    border: 1px solid var(--sn-border);
+    border-radius: var(--sn-radius);
+    padding: 2rem 1.5rem;
+    background-color: var(--sn-surface);
+}
+
+.sn-confirm-card .sn-confirm-icon {
+    font-size: 2.5rem;
+    color: #dc3545;
+    margin-bottom: 1rem;
+}

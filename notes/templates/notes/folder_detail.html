@@ -1,20 +1,29 @@
 {% extends "base.html" %}
 {% block title %}{{ folder.name }}{% endblock %}
 {% block content %}
-<h1>{{ folder.name }}</h1>
-<a href="{% url 'notes:folder-update' folder.pk %}" class="btn btn-outline-secondary">Renombrar</a>
-<a href="{% url 'notes:folder-delete' folder.pk %}" class="btn btn-outline-danger">Eliminar</a>
-<a href="{% url 'notes:folder-list' %}" class="btn btn-secondary">Volver</a>
+<div class="d-flex justify-content-between align-items-start mb-3">
+    <h1 class="h3 mb-0"><i class="bi bi-folder text-primary"></i> {{ folder.name }}</h1>
+    <div class="d-flex gap-2">
+        <a href="{% url 'notes:folder-update' folder.pk %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-pencil"></i> Renombrar</a>
+        <a href="{% url 'notes:folder-delete' folder.pk %}" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i> Eliminar</a>
+        <a href="{% url 'notes:folder-list' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Volver</a>
+    </div>
+</div>
 
-<h3 class="mt-4">Notas en esta carpeta</h3>
+<h3 class="h5 mt-4">Notas en esta carpeta</h3>
+{% if items %}
 <ul class="list-group">
 {% for item in items %}
-    <li class="list-group-item">
+    <li class="list-group-item d-flex justify-content-between align-items-center">
         <a href="{% url 'notes:shared-note-detail' item.share.pk %}">{{ item.share.note.title }}</a>
-        - {{ item.share.note.owner.username }}
+        <span class="text-muted small"><i class="bi bi-person"></i> {{ item.share.note.owner.username }}</span>
     </li>
-{% empty %}
-    <li class="list-group-item">Esta carpeta está vacía.</li>
 {% endfor %}
 </ul>
+{% else %}
+<div class="sn-empty-state">
+    <i class="bi bi-inbox sn-empty-icon"></i>
+    <p class="mb-0">Esta carpeta está vacía.</p>
+</div>
+{% endif %}
 {% endblock %}

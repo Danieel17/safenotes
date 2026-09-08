@@ -1,31 +1,36 @@
 {% extends "base.html" %}
 {% block title %}Notas compartidas conmigo{% endblock %}
 {% block content %}
-<h1>Notas compartidas conmigo</h1>
-<a href="{% url 'notes:folder-list' %}" class="btn btn-outline-primary mb-3">Mis carpetas</a>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3 mb-0">Notas compartidas conmigo</h1>
+    <a href="{% url 'notes:folder-list' %}" class="btn btn-outline-primary"><i class="bi bi-folder"></i> Mis carpetas</a>
+</div>
 
-{% if messages %}
-<ul class="list-unstyled">
-    {% for message in messages %}
-        <li class="alert alert-info">{{ message }}</li>
-    {% endfor %}
-</ul>
-{% endif %}
-
-<table class="table table-striped">
-    <thead>
-        <tr><th>Título</th><th>Propietario</th><th>Categoría</th></tr>
-    </thead>
-    <tbody>
+{% if shares %}
+<div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3">
     {% for share in shares %}
-        <tr>
-            <td><a href="{% url 'notes:shared-note-detail' share.pk %}">{{ share.note.title }}</a></td>
-            <td>{{ share.note.owner.username }}</td>
-            <td>{{ share.note.category|default:"—" }}</td>
-        </tr>
-    {% empty %}
-        <tr><td colspan="3">Todavía no tienes notas compartidas.</td></tr>
+    <div class="col">
+        <div class="card sn-card p-3">
+            <h5 class="card-title">{{ share.note.title }}</h5>
+            <div class="mb-2">
+                {% if share.note.category %}
+                    <span class="badge bg-primary-subtle text-primary-emphasis border">{{ share.note.category }}</span>
+                {% else %}
+                    <span class="text-muted small">Sin categoría</span>
+                {% endif %}
+            </div>
+            <small class="text-muted mb-2"><i class="bi bi-person"></i> {{ share.note.owner.username }}</small>
+            <div class="sn-card-actions">
+                <a href="{% url 'notes:shared-note-detail' share.pk %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-eye"></i> Ver</a>
+            </div>
+        </div>
+    </div>
     {% endfor %}
-    </tbody>
-</table>
+</div>
+{% else %}
+<div class="sn-empty-state">
+    <i class="bi bi-share sn-empty-icon"></i>
+    <p class="mb-0">Todavía no tienes notas compartidas.</p>
+</div>
+{% endif %}
 {% endblock %}

@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Registro de auditoría{% endblock %}
 {% block content %}
-<h1>Registro de auditoría</h1>
+<h1 class="h3 mb-3"><i class="bi bi-clock-history"></i> Registro de auditoría</h1>
 <form method="get" class="row g-2 mb-3">
     <div class="col-auto">
         <select name="action" class="form-select">
@@ -15,11 +15,14 @@
         <input type="text" name="actor" value="{{ actor_filter }}" class="form-control" placeholder="Usuario">
     </div>
     <div class="col-auto">
-        <button type="submit" class="btn btn-primary">Filtrar</button>
-        <a href="{% url 'audit:log-list' %}" class="btn btn-secondary">Limpiar</a>
+        <button type="submit" class="btn btn-primary"><i class="bi bi-funnel"></i> Filtrar</button>
+        <a href="{% url 'audit:log-list' %}" class="btn btn-outline-secondary">Limpiar</a>
     </div>
 </form>
-<table class="table table-striped">
+
+{% if logs %}
+<div class="table-responsive">
+<table class="table table-hover align-middle bg-white">
     <thead>
         <tr><th>Fecha</th><th>Actor</th><th>Acción</th><th>Objetivo</th><th>IP</th></tr>
     </thead>
@@ -28,15 +31,21 @@
         <tr>
             <td>{{ log.timestamp }}</td>
             <td>{{ log.actor|default:"-" }}</td>
-            <td>{{ log.get_action_display }}</td>
+            <td><span class="badge bg-secondary">{{ log.get_action_display }}</span></td>
             <td>{{ log.target_repr }}</td>
             <td>{{ log.ip_address|default:"-" }}</td>
         </tr>
-    {% empty %}
-        <tr><td colspan="5">No hay registros.</td></tr>
     {% endfor %}
     </tbody>
 </table>
+</div>
+{% else %}
+<div class="sn-empty-state">
+    <i class="bi bi-clock-history sn-empty-icon"></i>
+    <p class="mb-0">No hay registros.</p>
+</div>
+{% endif %}
+
 {% if is_paginated %}
 <nav>
     <ul class="pagination">

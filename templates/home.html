@@ -1,6 +1,71 @@
 {% extends "base.html" %}
 {% block title %}Home - SafeNotes{% endblock %}
 {% block content %}
-    <h1>Welcome to SafeNotes</h1>
-    <p>This is a placeholder home page proving the base template renders correctly.</p>
+<div class="mb-4">
+    <h1 class="h3 mb-1">Bienvenido a SafeNotes</h1>
+    <p class="text-muted">Gestiona tus notas de forma segura según tu rol.</p>
+</div>
+
+{% if user.is_authenticated %}
+<div class="row row-cols-1 row-cols-md-3 g-3">
+    {% if user.role == 'admin' %}
+        <div class="col">
+            <a href="{% url 'user-list' %}" class="text-decoration-none">
+                <div class="card sn-card p-3">
+                    <i class="bi bi-people fs-2 text-primary mb-2"></i>
+                    <div class="card-title mb-0">Usuarios</div>
+                    <small class="text-muted">Gestionar cuentas y roles</small>
+                </div>
+            </a>
+        </div>
+        <div class="col">
+            <a href="{% url 'notes:category-list' %}" class="text-decoration-none">
+                <div class="card sn-card p-3">
+                    <i class="bi bi-tags fs-2 text-primary mb-2"></i>
+                    <div class="card-title mb-0">Categorías</div>
+                    <small class="text-muted">Organiza las categorías de notas</small>
+                </div>
+            </a>
+        </div>
+        <div class="col">
+            <a href="{% url 'audit:log-list' %}" class="text-decoration-none">
+                <div class="card sn-card p-3">
+                    <i class="bi bi-clock-history fs-2 text-primary mb-2"></i>
+                    <div class="card-title mb-0">Auditoría</div>
+                    <small class="text-muted">Revisa el registro de actividad</small>
+                </div>
+            </a>
+        </div>
+    {% elif user.role == 'editor' %}
+        <div class="col">
+            <a href="{% url 'notes:note-list' %}" class="text-decoration-none">
+                <div class="card sn-card p-3">
+                    <i class="bi bi-journal-text fs-2 text-primary mb-2"></i>
+                    <div class="card-title mb-0">Mis Notas</div>
+                    <small class="text-muted">Crea y administra tus notas</small>
+                </div>
+            </a>
+        </div>
+    {% elif user.role == 'lector' %}
+        <div class="col">
+            <a href="{% url 'notes:shared-note-list' %}" class="text-decoration-none">
+                <div class="card sn-card p-3">
+                    <i class="bi bi-share fs-2 text-primary mb-2"></i>
+                    <div class="card-title mb-0">Notas Compartidas</div>
+                    <small class="text-muted">Notas que otros compartieron contigo</small>
+                </div>
+            </a>
+        </div>
+        <div class="col">
+            <a href="{% url 'notes:folder-list' %}" class="text-decoration-none">
+                <div class="card sn-card p-3">
+                    <i class="bi bi-folder fs-2 text-primary mb-2"></i>
+                    <div class="card-title mb-0">Carpetas</div>
+                    <small class="text-muted">Organiza tus notas compartidas</small>
+                </div>
+            </a>
+        </div>
+    {% endif %}
+</div>
+{% endif %}
 {% endblock %}

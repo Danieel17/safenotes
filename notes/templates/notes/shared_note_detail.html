@@ -1,30 +1,30 @@
 {% extends "base.html" %}
 {% block title %}{{ note.title }}{% endblock %}
 {% block content %}
-<h1>{{ note.title }}</h1>
-<p><strong>Propietario:</strong> {{ note.owner.username }}</p>
-<p><strong>Categoría:</strong> {{ note.category|default:"—" }}</p>
-<pre>{{ note.content }}</pre>
+<div class="d-flex justify-content-between align-items-start mb-3">
+    <div>
+        <h1 class="h3 mb-1">{{ note.title }}</h1>
+        <span class="text-muted small"><i class="bi bi-person"></i> {{ note.owner.username }}</span>
+        {% if note.category %}
+            <span class="badge bg-primary-subtle text-primary-emphasis border ms-2">{{ note.category }}</span>
+        {% endif %}
+    </div>
+    <a href="{% url 'notes:shared-note-list' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Volver</a>
+</div>
 
-<a href="{% url 'notes:shared-note-list' %}" class="btn btn-secondary">Volver</a>
-
-{% if messages %}
-<ul class="list-unstyled mt-3">
-    {% for message in messages %}
-        <li class="alert alert-info">{{ message }}</li>
-    {% endfor %}
-</ul>
-{% endif %}
+<div class="card sn-card p-3 mb-4">
+    <pre class="mb-0" style="white-space: pre-wrap;">{{ note.content }}</pre>
+</div>
 
 <hr>
-<h3>Agregar a una carpeta</h3>
+<h3 class="h5"><i class="bi bi-folder-plus"></i> Agregar a una carpeta</h3>
 {% if add_to_folder_form.fields.folder.queryset.exists %}
 <form method="post" action="{% url 'notes:shared-note-add-to-folder' share.pk %}" class="row g-2 align-items-end">
     {% csrf_token %}
     <div class="col-auto">{{ add_to_folder_form.folder }}</div>
-    <div class="col-auto"><button type="submit" class="btn btn-primary">Agregar</button></div>
+    <div class="col-auto"><button type="submit" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Agregar</button></div>
 </form>
 {% else %}
-<p>No tienes carpetas todavía. <a href="{% url 'notes:folder-create' %}">Crea una</a>.</p>
+<p class="text-muted">No tienes carpetas todavía. <a href="{% url 'notes:folder-create' %}">Crea una</a>.</p>
 {% endif %}
 {% endblock %}

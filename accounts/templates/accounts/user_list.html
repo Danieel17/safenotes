@@ -1,37 +1,60 @@
 {% extends "base.html" %}
 {% block title %}Usuarios{% endblock %}
 {% block content %}
-<h1>Usuarios</h1>
-<a href="{% url 'user-create' %}" class="btn btn-primary mb-3">Nuevo usuario</a>
-<table class="table table-striped">
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3 mb-0">Usuarios</h1>
+    <a href="{% url 'user-create' %}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Nuevo usuario</a>
+</div>
+
+{% if users %}
+<div class="table-responsive">
+<table class="table table-hover align-middle bg-white">
     <thead>
-        <tr><th>Usuario</th><th>Rol</th><th>Activo</th><th>Bloqueado</th><th>Acciones</th></tr>
+        <tr><th>Usuario</th><th>Rol</th><th>Estado</th><th>Bloqueado</th><th>Acciones</th></tr>
     </thead>
     <tbody>
     {% for u in users %}
         <tr>
             <td>{{ u.username }}</td>
-            <td>{{ u.get_role_display }}</td>
-            <td>{{ u.is_active|yesno:"Sí,No" }}</td>
-            <td>{% if u.locked_until and u.locked_until > now %}Sí{% else %}No{% endif %}</td>
+            <td><span class="badge sn-badge-{{ u.role }}">{{ u.get_role_display }}</span></td>
+            <td>
+                {% if u.is_active %}
+                    <span class="badge bg-success">Activo</span>
+                {% else %}
+                    <span class="badge bg-secondary">Inactivo</span>
+                {% endif %}
+            </td>
+            <td>
+                {% if u.locked_until and u.locked_until > now %}
+                    <span class="badge bg-danger">Sí</span>
+                {% else %}
+                    <span class="badge bg-light text-dark border">No</span>
+                {% endif %}
+            </td>
             <td>
                 {% if u.role != "admin" %}
                 <form method="post" action="{% url 'user-toggle-active' u.pk %}" class="d-inline">
                     {% csrf_token %}
                     <button type="submit" class="btn btn-sm btn-outline-warning"
                         onclick="return confirm('¿Confirma {% if u.is_active %}desactivar{% else %}activar{% endif %} a {{ u.username }}?');">
-                        {% if u.is_active %}Desactivar{% else %}Activar{% endif %}
+                        {% if u.is_active %}<i class="bi bi-slash-circle"></i> Desactivar{% else %}<i class="bi bi-check-circle"></i> Activar{% endif %}
                     </button>
                 </form>
-                <a href="{% url 'user-role-change' u.pk %}" class="btn btn-sm btn-outline-secondary">Cambiar rol</a>
+                <a href="{% url 'user-role-change' u.pk %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-person-gear"></i> Cambiar rol</a>
                 {% else %}
                 <span class="text-muted">-</span>
                 {% endif %}
             </td>
         </tr>
-    {% empty %}
-        <tr><td colspan="5">No hay usuarios.</td></tr>
     {% endfor %}
     </tbody>
 </table>
+</div>
+{% else %}
+<div class="sn-empty-state">
+    <i class="bi bi-people sn-empty-icon"></i>
+    <p class="mb-3">No hay usuarios.</p>
+    <a href="{% url 'user-create' %}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Nuevo usuario</a>
+</div>
+{% endif %}
 {% endblock %}
