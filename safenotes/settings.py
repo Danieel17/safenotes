@@ -156,3 +156,7 @@ MAILERS = {
 # Security-related cookie settings
 SESSION_COOKIE_SAMESITE = "Lax"
 CSRF_COOKIE_HTTPONLY = True
+
+# Custom user model (accounts app) - must be set before any migrations
+# that reference the User model are created/applied.
+AUTH_USER_MODEL = "accounts.User"
