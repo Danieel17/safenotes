@@ -60,3 +60,142 @@ class CategoryApiTests(TestCase):
     def test_categories_require_authentication(self):
         response = self.client.get(self.list_url)
         self.assertEqual(response.status_code, 401)
+
+
+from audit.models import AuditLog
+
+from .models import Note, Share
+
+
+class NoteApiTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.editor1 = User.objects.create_user(
+            username="note_editor1", password="SafeNotes2026!", role="editor"
+        )
+        self.editor2 = User.objects.create_user(
+            username="note_editor2", password="SafeNotes2026!", role="editor"
+        )
+        self.lector = User.objects.create_user(
+            username="note_lector1", password="SafeNotes2026!", role="lector"
+        )
+        self.admin = User.objects.create_user(
+            username="note_admin1", password="SafeNotes2026!", role="admin"
+        )
+        self.list_url = reverse("note-list")
+
+    def _authenticate(self, username, password="SafeNotes2026!"):
+        token_url = reverse("api-token-obtain-pair")
+        response = self.client.post(
+            token_url, {"username": username, "password": password}, format="json"
+        )
+        access = response.data["access"]
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {access}")
+
+    def _detail_url(self, pk):
+        return reverse("note-detail", args=[pk])
+
+    def _share_url(self, pk):
+        return reverse("note-share", args=[pk])
+
+    def _unshare_url(self, pk):
+        return reverse("note-unshare", args=[pk])
+
+    def test_editor_can_create_list_update_delete_own_note(self):
+        self._authenticate("note_editor1")
+
+        response = self.client.post(
+            self.list_url, {"title": "Note A", "content": "secret"}, format="json"
+        )
+        self.assertEqual(response.status_code, 201)
+        note_id = response.data["id"]
+        self.assertNotIn("owner", response.data)
+
+        # Second editor's own note should not leak into editor1's list.
+        other_note = Note.objects.create(
+            owner=self.editor2, title="Note B", content="other"
+        )
+
+        response = self.client.get(self.list_url)
+        self.assertEqual(response.status_code, 200)
+        returned_ids = [item["id"] for item in response.data["results"]]
+        self.assertIn(note_id, returned_ids)
+        self.assertNotIn(other_note.pk, returned_ids)
+
+        response = self.client.patch(
+            self._detail_url(note_id), {"title": "Note A Updated"}, format="json"
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["title"], "Note A Updated")
+
+        response = self.client.delete(self._detail_url(note_id))
+        self.assertEqual(response.status_code, 204)
+        self.assertFalse(Note.objects.filter(pk=note_id).exists())
+
+    def test_cannot_access_another_editors_note_returns_404(self):
+        other_note = Note.objects.create(
+            owner=self.editor2, title="Note B", content="other"
+        )
+        self._authenticate("note_editor1")
+        response = self.client.get(self._detail_url(other_note.pk))
+        self.assertEqual(response.status_code, 404)
+
+    def test_share_creates_share_and_audit_log(self):
+        note = Note.objects.create(owner=self.editor1, title="Shared", content="x")
+        self._authenticate("note_editor1")
+
+        response = self.client.post(
+            self._share_url(note.pk), {"shared_with": self.lector.pk}, format="json"
+        )
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(Share.objects.filter(note=note, shared_with=self.lector).count(), 1)
+        self.assertEqual(
+            AuditLog.objects.filter(action="note_shared", actor=self.editor1).count(), 1
+        )
+
+    def test_duplicate_share_is_graceful_noop(self):
+        note = Note.objects.create(owner=self.editor1, title="Shared", content="x")
+        Share.objects.create(note=note, shared_with=self.lector)
+        self._authenticate("note_editor1")
+
+        response = self.client.post(
+            self._share_url(note.pk), {"shared_with": self.lector.pk}, format="json"
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(Share.objects.filter(note=note, shared_with=self.lector).count(), 1)
+
+    def test_share_with_non_lector_rejected(self):
+        note = Note.objects.create(owner=self.editor1, title="Shared", content="x")
+        self._authenticate("note_editor1")
+
+        response = self.client.post(
+            self._share_url(note.pk), {"shared_with": self.editor2.pk}, format="json"
+        )
+        self.assertEqual(response.status_code, 400)
+
+        response = self.client.post(
+            self._share_url(note.pk), {"shared_with": self.admin.pk}, format="json"
+        )
+        self.assertEqual(response.status_code, 400)
+
+    def test_lector_and_admin_forbidden_from_note_endpoints(self):
+        note = Note.objects.create(owner=self.editor1, title="Note", content="x")
+
+        self._authenticate("note_lector1")
+        response = self.client.get(self.list_url)
+        self.assertEqual(response.status_code, 403)
+
+        self._authenticate("note_admin1")
+        response = self.client.get(self._detail_url(note.pk))
+        self.assertEqual(response.status_code, 403)
+
+    def test_unshare_removes_share_row(self):
+        note = Note.objects.create(owner=self.editor1, title="Shared", content="x")
+        Share.objects.create(note=note, shared_with=self.lector)
+        self._authenticate("note_editor1")
+
+        response = self.client.post(
+            self._unshare_url(note.pk), {"shared_with": self.lector.pk}, format="json"
+        )
+        self.assertEqual(response.status_code, 204)
+        self.assertFalse(Share.objects.filter(note=note, shared_with=self.lector).exists())

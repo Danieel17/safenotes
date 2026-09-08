@@ -16,10 +16,11 @@ from accounts.api_views import (
     UserToggleActiveView,
 )
 from audit.api_views import AuditLogListView
-from notes.api_views import CategoryViewSet
+from notes.api_views import CategoryViewSet, NoteViewSet
 
 router = DefaultRouter()
 router.register("categories", CategoryViewSet, basename="category")
+router.register("notes", NoteViewSet, basename="note")
 
 urlpatterns = router.urls + [
     path("auth/token/", SafeNotesTokenObtainPairView.as_view(), name="api-token-obtain-pair"),
