@@ -24,6 +24,8 @@ class LockoutAwareTokenObtainPairSerializer(TokenObtainPairSerializer):
 
     @classmethod
     def get_token(cls, user):
+        # Se inyecta el rol en el payload del JWT para que el frontend
+        # sepa que rol tiene quien hace la peticion sin otra llamada.
         token = super().get_token(user)
         token["role"] = user.role
         return token
@@ -31,6 +33,8 @@ class LockoutAwareTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
         request = self.context.get("request")
         username = attrs.get("username")
+        # Buscamos al usuario antes de validar credenciales para poder
+        # aplicar lockout, contadores de fallos y auditoria.
         existing_user = User.objects.filter(username=username).first()
 
         # 1. Lock check happens before any password verification.
@@ -118,6 +122,7 @@ class UserCreateSerializer(serializers.ModelSerializer):
     ``/admin/`` site, never through this API.
     """
 
+    # La password es write_only: nunca debe salir en las respuestas.
     password = serializers.CharField(write_only=True)
 
     class Meta:
