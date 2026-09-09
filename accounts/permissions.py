@@ -19,6 +19,7 @@ class IsAdmin(BasePermission):
     """Allow access only to authenticated users with the 'admin' role."""
 
     def has_permission(self, request, view):
+        # Exige autenticado + rol admin, en ese orden.
         return bool(
             request.user
             and request.user.is_authenticated

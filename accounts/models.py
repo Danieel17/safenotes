@@ -22,6 +22,9 @@ class User(AbstractUser):
         (ROLE_LECTOR, "Lector"),
     ]
 
+    # Rol fijo del usuario: admin, editor o lector.
     role = models.CharField(max_length=10, choices=ROLE_CHOICES)
+    # Conteo de intentos de login fallidos (para el bloqueo por lockout).
     failed_login_count = models.PositiveSmallIntegerField(default=0)
+    # Hasta cuando queda bloqueada la cuenta tras superar el umbral.
     locked_until = models.DateTimeField(null=True, blank=True)
