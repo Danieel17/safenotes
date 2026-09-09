@@ -38,6 +38,7 @@ class LogoutView(APIView):
 
     def post(self, request):
         refresh_str = request.data.get("refresh")
+        # Si no viene refresh, responder 400 sin tocar nada mas.
         if not refresh_str:
             return Response(
                 {"detail": "El campo 'refresh' es obligatorio."},
@@ -46,6 +47,7 @@ class LogoutView(APIView):
 
         try:
             token = RefreshToken(refresh_str)
+            # SimpleJWT blacklist invalida el refresh token usado.
             token.blacklist()
         except TokenError:
             return Response(

@@ -9,6 +9,7 @@ def log_action(actor, action, target_repr="", request=None):
     field population stay consistent.
     """
     ip_address = None
+    # La IP se extrae del request META; si no hay request, queda None.
     if request is not None:
         ip_address = request.META.get("REMOTE_ADDR")
 
