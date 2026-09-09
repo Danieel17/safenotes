@@ -51,9 +51,12 @@ class NoteViewSet(viewsets.ModelViewSet):
     serializer_class = NoteSerializer
 
     def get_queryset(self):
+        # Filtro por owner = request.user: es la barrera anti-IDOR de todo
+        # el viewset (get_object() dependen de este queryset).
         return Note.objects.filter(owner=self.request.user).order_by("-updated_at")
 
     def perform_create(self, serializer):
+        # El owner no viene del cliente: se toma siempre del usuario autenticado.
         instance = serializer.save(owner=self.request.user)
         log_action(
             actor=self.request.user,
@@ -86,6 +89,7 @@ class NoteViewSet(viewsets.ModelViewSet):
         note = self.get_object()
         serializer = ShareSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        # El destino ya viene resuelto a un User (id o username) tras validate().
         shared_with = serializer.validated_data["shared_with"]
 
         if Share.objects.filter(note=note, shared_with=shared_with).exists():
@@ -141,11 +145,15 @@ class SharedNoteViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = SharedNoteSerializer
 
     def get_queryset(self):
+        # Solo shares dirigidos a este lector: quien ve otro share ajeno
+        # recibe 404 (anti-IDOR), igual que en NoteViewSet.
         return Share.objects.filter(shared_with=self.request.user).select_related(
             "note", "note__owner", "note__category"
         ).order_by("-created_at")
 
     def retrieve(self, request, *args, **kwargs):
+        # Leer una nota compartida queda registrado en el audit log:
+        # es una vista "sensible" que conviene auditar.
         instance = self.get_object()
         serializer = self.get_serializer(instance)
         log_action(
