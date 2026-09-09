@@ -61,6 +61,8 @@ class ShareSerializer(serializers.ModelSerializer):
     deliberately no general user-listing endpoint available to Editors.
     """
 
+    # Campo de solo escritura: recibimos el username y lo resolvemos
+    # al User dentro de validate(); nunca viaja en la respuesta.
     shared_with_username = serializers.CharField(write_only=True, required=False)
 
     class Meta:

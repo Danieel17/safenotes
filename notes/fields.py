@@ -4,6 +4,8 @@ from django.db import models
 
 
 def _get_fernet():
+    # La key se lee desde settings (NOTES_ENCRYPTION_KEY). Aceptamos
+    # str o bytes y normalizamos a bytes para Fernet.
     key = settings.NOTES_ENCRYPTION_KEY
     if isinstance(key, str):
         key = key.encode()
