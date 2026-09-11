@@ -106,11 +106,35 @@ body {
     .sn-sidebar {
         display: none;
     }
+    .sn-sidebar.sn-sidebar-open {
+        display: flex;
+        position: fixed;
+        inset: 0;
+        z-index: 1050;
+        width: 280px;
+        height: 100vh;
+        box-shadow: 0.5rem 0 1.5rem rgba(0, 0, 0, 0.25);
+    }
     .sn-topbar {
         display: flex;
         align-items: center;
         justify-content: space-between;
     }
+    .sn-mobile-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.4);
+        z-index: 1040;
+    }
+}
+
+.sn-topbar-toggle {
+    color: var(--sn-sidebar-bg);
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    line-height: 1;
+    padding: 0.25rem 0.5rem;
 }
 
 .sn-main {

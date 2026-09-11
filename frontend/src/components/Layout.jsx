@@ -1,4 +1,5 @@
-import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 const ROLE_HOME = {
@@ -16,10 +17,36 @@ const ROLE_LABEL = {
 export default function Layout({ children }) {
   const { user, role, logout } = useAuth();
   const homeLink = ROLE_HOME[role] || "/";
+  const location = useLocation();
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  // Cierra el menú móvil automáticamente al navegar a otra ruta.
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [location.pathname]);
 
   return (
     <div className="sn-layout d-flex">
-      <aside className="sn-sidebar">
+      <div className="sn-topbar d-lg-none">
+        <button
+          type="button"
+          className="sn-topbar-toggle"
+          aria-label="Abrir menú"
+          onClick={() => setMobileOpen(true)}
+        >
+          <i className="bi bi-list" />
+        </button>
+        <span className="sn-brand text-dark">
+          <i className="bi bi-shield-lock-fill" /> SafeNotes
+        </span>
+        <span />
+      </div>
+
+      {mobileOpen && (
+        <div className="sn-mobile-backdrop" onClick={() => setMobileOpen(false)} />
+      )}
+
+      <aside className={`sn-sidebar${mobileOpen ? " sn-sidebar-open" : ""}`}>
         <span className="sn-brand">
           <i className="bi bi-shield-lock-fill" /> SafeNotes
         </span>
