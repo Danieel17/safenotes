@@ -199,6 +199,37 @@ class ProfileApiTests(TestCase):
         )
         self.assertEqual(patch_response.status_code, 401)
 
+    def test_lector_can_delete_own_account(self):
+        self._authenticate()
+        response = self.client.delete(self.profile_url)
+        self.assertEqual(response.status_code, 204)
+        self.assertFalse(User.objects.filter(username="lector1").exists())
+
+    def test_deleting_own_account_logs_user_deleted(self):
+        self._authenticate()
+        self.client.delete(self.profile_url)
+        self.assertTrue(
+            AuditLog.objects.filter(
+                action="user_deleted", target_repr__icontains="lector1"
+            ).exists()
+        )
+
+    def test_editor_cannot_delete_own_account_via_profile(self):
+        editor = User.objects.create_user(
+            username="editor_selfdel", password="SafeNotes2026!", role="editor"
+        )
+        client = APIClient()
+        token_url = reverse("api-token-obtain-pair")
+        response = client.post(
+            token_url,
+            {"username": "editor_selfdel", "password": "SafeNotes2026!"},
+            format="json",
+        )
+        client.credentials(HTTP_AUTHORIZATION=f"Bearer {response.data['access']}")
+        delete_response = client.delete(self.profile_url)
+        self.assertEqual(delete_response.status_code, 403)
+        self.assertTrue(User.objects.filter(username="editor_selfdel").exists())
+
 
 class UserManagementApiTests(TestCase):
     def setUp(self):

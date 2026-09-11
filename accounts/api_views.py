@@ -65,14 +65,37 @@ class LogoutView(APIView):
         return Response(status=status.HTTP_205_RESET_CONTENT)
 
 
-class ProfileView(generics.RetrieveUpdateAPIView):
-    """Self-service profile view/update - always operates on request.user."""
+class ProfileView(generics.RetrieveUpdateDestroyAPIView):
+    """Self-service profile view/update/delete - always operates on request.user.
+
+    DELETE is restricted to the Lector role (RFL002.3 in the report: solo el
+    Lector/Invitado puede eliminar su propia cuenta). Admin and Editor accounts
+    cannot self-delete through this endpoint - deleting an Editor would orphan
+    their notes' ownership semantics, and Admin accounts are managed exclusively
+    through createsuperuser/Django admin per the rest of this API.
+    """
 
     serializer_class = ProfileSerializer
     permission_classes = [IsAuthenticated]
 
     def get_object(self):
         return self.request.user
+
+    def destroy(self, request, *args, **kwargs):
+        user = self.get_object()
+        if user.role != User.ROLE_LECTOR:
+            return Response(
+                {"detail": "Solo las cuentas de Lector pueden eliminar su propio perfil."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        log_action(
+            actor=user,
+            action=AuditLog.ACTION_USER_DELETED,
+            target_repr=f"User:{user.username}",
+            request=request,
+        )
+        user.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class UserListCreateView(generics.ListCreateAPIView):

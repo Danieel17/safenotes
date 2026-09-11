@@ -53,7 +53,19 @@ class NoteViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         # Filtro por owner = request.user: es la barrera anti-IDOR de todo
         # el viewset (get_object() dependen de este queryset).
-        return Note.objects.filter(owner=self.request.user).order_by("-updated_at")
+        queryset = Note.objects.filter(owner=self.request.user).order_by("-updated_at")
+
+        # RFE003.2: filtrar/buscar notas propias por categoria o texto libre
+        # en el titulo. Ambos son opcionales y combinables.
+        category_id = self.request.query_params.get("category")
+        if category_id:
+            queryset = queryset.filter(category_id=category_id)
+
+        search = self.request.query_params.get("search")
+        if search:
+            queryset = queryset.filter(title__icontains=search)
+
+        return queryset
 
     def perform_create(self, serializer):
         # El owner no viene del cliente: se toma siempre del usuario autenticado.

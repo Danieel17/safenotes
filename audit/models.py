@@ -21,6 +21,7 @@ class AuditLog(models.Model):
     ACTION_USER_CREATED = "user_created"
     ACTION_USER_ROLE_CHANGED = "user_role_changed"
     ACTION_USER_DEACTIVATED = "user_deactivated"
+    ACTION_USER_DELETED = "user_deleted"
 
     ACTION_CHOICES = [
         (ACTION_LOGIN, "Login"),
@@ -34,6 +35,7 @@ class AuditLog(models.Model):
         (ACTION_USER_CREATED, "User created"),
         (ACTION_USER_ROLE_CHANGED, "User role changed"),
         (ACTION_USER_DEACTIVATED, "User deactivated"),
+        (ACTION_USER_DELETED, "User deleted (self-service)"),
     ]
 
     actor = models.ForeignKey(

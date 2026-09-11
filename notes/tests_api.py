@@ -132,6 +132,31 @@ class NoteApiTests(TestCase):
         self.assertEqual(response.status_code, 204)
         self.assertFalse(Note.objects.filter(pk=note_id).exists())
 
+    def test_list_filters_by_category_and_search(self):
+        self._authenticate("note_editor1")
+        category = Category.objects.create(name="Trabajo", created_by=self.admin)
+        other_category = Category.objects.create(name="Personal", created_by=self.admin)
+
+        Note.objects.create(
+            owner=self.editor1, title="Reunion equipo", content="x", category=category
+        )
+        Note.objects.create(
+            owner=self.editor1, title="Lista compras", content="y", category=other_category
+        )
+        Note.objects.create(owner=self.editor1, title="Sin categoria", content="z")
+
+        response = self.client.get(self.list_url, {"category": category.pk})
+        self.assertEqual(response.status_code, 200)
+        titles = [n["title"] for n in response.data["results"]]
+        self.assertEqual(titles, ["Reunion equipo"])
+
+        response = self.client.get(self.list_url, {"search": "lista"})
+        titles = [n["title"] for n in response.data["results"]]
+        self.assertEqual(titles, ["Lista compras"])
+
+        response = self.client.get(self.list_url)
+        self.assertEqual(len(response.data["results"]), 3)
+
     def test_cannot_access_another_editors_note_returns_404(self):
         other_note = Note.objects.create(
             owner=self.editor2, title="Note B", content="other"
