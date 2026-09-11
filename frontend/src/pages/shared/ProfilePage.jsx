@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Layout from "../../components/Layout";
 import apiClient from "../../api/client";
+import { useAuth } from "../../context/AuthContext";
 
 const ROLE_LABEL = {
   admin: "Administrador",
@@ -21,6 +23,8 @@ function extractError(err, fallback) {
 }
 
 export default function ProfilePage() {
+  const { role, logout } = useAuth();
+  const navigate = useNavigate();
   const [profile, setProfile] = useState(null);
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(true);
@@ -28,6 +32,8 @@ export default function ProfilePage() {
   const [saveError, setSaveError] = useState("");
   const [saveSuccess, setSaveSuccess] = useState("");
   const [saving, setSaving] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
+  const [deleting, setDeleting] = useState(false);
 
   async function fetchProfile() {
     setLoading(true);
@@ -61,6 +67,26 @@ export default function ProfilePage() {
       setSaveError(extractError(err, "No se pudo actualizar el perfil."));
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleDeleteAccount() {
+    if (
+      !window.confirm(
+        "¿Eliminar tu cuenta de forma permanente? Se perderán tus carpetas y el acceso a las notas compartidas contigo. Esta acción no se puede deshacer."
+      )
+    ) {
+      return;
+    }
+    setDeleteError("");
+    setDeleting(true);
+    try {
+      await apiClient.delete("profile/");
+      await logout();
+      navigate("/login", { replace: true });
+    } catch (err) {
+      setDeleteError(extractError(err, "No se pudo eliminar la cuenta."));
+      setDeleting(false);
     }
   }
 
@@ -104,6 +130,25 @@ export default function ProfilePage() {
               {saving ? "Guardando..." : "Guardar cambios"}
             </button>
           </form>
+
+          {role === "lector" && (
+            <div className="mt-4 pt-3 border-top">
+              <h2 className="h6 text-danger">Zona de peligro</h2>
+              <p className="text-muted small">
+                Eliminar tu cuenta es permanente: perderás tus carpetas y el acceso a las notas
+                que te compartieron.
+              </p>
+              {deleteError && <div className="alert alert-danger py-2">{deleteError}</div>}
+              <button
+                type="button"
+                className="btn btn-outline-danger"
+                disabled={deleting}
+                onClick={handleDeleteAccount}
+              >
+                {deleting ? "Eliminando..." : "Eliminar mi cuenta"}
+              </button>
+            </div>
+          )}
         </div>
       )}
     </Layout>

@@ -30,19 +30,28 @@ export default function NotesListPage() {
   const [loading, setLoading] = useState(true);
   const [listError, setListError] = useState("");
   const [busyId, setBusyId] = useState(null);
+  const [search, setSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
 
-  async function fetchAll() {
+  async function fetchCategories() {
+    try {
+      const { data } = await apiClient.get("categories/");
+      setCategories(Array.isArray(data) ? data : data.results || []);
+    } catch (err) {
+      // La lista de categorías es secundaria; un fallo aquí no debe bloquear
+      // la vista de notas, solo deshabilita el filtro por categoría.
+    }
+  }
+
+  async function fetchNotes() {
     setLoading(true);
     setListError("");
     try {
-      const [notesResp, categoriesResp] = await Promise.all([
-        apiClient.get("notes/"),
-        apiClient.get("categories/"),
-      ]);
-      const notesData = notesResp.data;
-      const categoriesData = categoriesResp.data;
-      setNotes(Array.isArray(notesData) ? notesData : notesData.results || []);
-      setCategories(Array.isArray(categoriesData) ? categoriesData : categoriesData.results || []);
+      const params = {};
+      if (search.trim()) params.search = search.trim();
+      if (categoryFilter) params.category = categoryFilter;
+      const { data } = await apiClient.get("notes/", { params });
+      setNotes(Array.isArray(data) ? data : data.results || []);
     } catch (err) {
       setListError(extractError(err, "No se pudo cargar la lista de notas."));
     } finally {
@@ -51,8 +60,14 @@ export default function NotesListPage() {
   }
 
   useEffect(() => {
-    fetchAll();
+    fetchCategories();
   }, []);
+
+  useEffect(() => {
+    const timeoutId = setTimeout(fetchNotes, 300);
+    return () => clearTimeout(timeoutId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search, categoryFilter]);
 
   const categoryName = (id) => categories.find((c) => c.id === id)?.name;
 
@@ -62,7 +77,7 @@ export default function NotesListPage() {
     setListError("");
     try {
       await apiClient.delete(`notes/${note.id}/`);
-      await fetchAll();
+      await fetchNotes();
     } catch (err) {
       setListError(extractError(err, "No se pudo eliminar la nota."));
     } finally {
@@ -79,6 +94,32 @@ export default function NotesListPage() {
         </Link>
       </div>
 
+      <div className="row g-2 mb-3">
+        <div className="col-sm-7">
+          <input
+            type="search"
+            className="form-control"
+            placeholder="Buscar por título..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+        <div className="col-sm-5">
+          <select
+            className="form-select"
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
+          >
+            <option value="">Todas las categorías</option>
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
       {listError && <div className="alert alert-danger">{listError}</div>}
 
       {loading ? (
@@ -86,7 +127,11 @@ export default function NotesListPage() {
       ) : notes.length === 0 ? (
         <div className="sn-empty-state">
           <i className="bi bi-journal-text sn-empty-icon" />
-          <p className="mb-0">No tienes notas todavía.</p>
+          <p className="mb-0">
+            {search || categoryFilter
+              ? "No hay notas que coincidan con el filtro."
+              : "No tienes notas todavía."}
+          </p>
         </div>
       ) : (
         <div className="row row-cols-1 row-cols-md-3 g-3">
